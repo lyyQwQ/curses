@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { proxy } from "valtio";
 import { Translation_Backends } from "./schema";
 import { Translation_AzureService } from "./services/azure";
+import { Translation_OpenAIService } from "./services/openai";
 import {
   ITranslationReceiver,
   ITranslationService,
@@ -24,6 +25,7 @@ const backends: {
   [k in Translation_Backends]: ITranslationServiceConstructor;
 } = {
   [Translation_Backends.azure]: Translation_AzureService,
+  [Translation_Backends.openai]: Translation_OpenAIService,
 };
 
 class Service_Translation implements IServiceInterface, ITranslationReceiver {
@@ -64,9 +66,15 @@ class Service_Translation implements IServiceInterface, ITranslationReceiver {
     } catch (error) {}
   }
 
+  async loadOpenAI() {
+    const openaiResp = await fetch("https://api.openai.com/v1/models");
+    const json = await openaiResp.json();
+    console.log(json);
+  }
+
   init(): void {
     this.loadAzure();
-
+    this.loadOpenAI();
     if (this.data.autoStart)
       this.start();
       
