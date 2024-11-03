@@ -6,6 +6,7 @@ import {
   ITranslationService
 } from "../types";
 
+
 export class Translation_OpenAIService implements ITranslationService {
   constructor(private receiver: ITranslationReceiver) {}
 

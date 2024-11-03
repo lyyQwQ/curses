@@ -324,6 +324,9 @@ name = "bytes"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "cairo-rs"
@@ -3003,10 +3006,12 @@ dependencies = [
  "system-configuration",
  "tokio",
  "tokio-native-tls",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "winreg 0.50.0",
 ]
@@ -3708,6 +3713,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77567d2b3b74de4588d544147142d02297f3eaa171a25a065252141d8597a516"
 dependencies = [
  "anyhow",
+ "bytes",
  "cocoa",
  "dirs-next",
  "dunce",
@@ -3722,6 +3728,7 @@ dependencies = [
  "heck 0.5.0",
  "http",
  "ignore",
+ "indexmap 1.9.3",
  "objc",
  "once_cell",
  "open",
@@ -3729,6 +3736,7 @@ dependencies = [
  "rand 0.8.5",
  "raw-window-handle",
  "regex",
+ "reqwest",
  "rfd",
  "semver",
  "serde",
@@ -4541,6 +4549,19 @@ name = "wasm-bindgen-shared"
 version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
+
+[[package]]
+name = "wasm-streams"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4609d447824375f43e1ffbc051b50ad8f4b3ae8219680c94452ea05eb240ac7"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
 
 [[package]]
 name = "web-sys"

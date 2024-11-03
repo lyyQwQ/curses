@@ -16,6 +16,7 @@ import {InspectorTabPath}                                                       
 import Inspector_Scenes                                                           from "./inspector_scenes";
 import Inspector_Settings                                                         from "./inspector_settings";
 import Inspector_Twitch from "./inspector_twitch";
+import Inspector_Bilibili from "./inspector_bilibili";
 import Inspector_Discord from "./inspector_discord";
 import Inspector_OBS from "./inspector_obs";
 
@@ -52,6 +53,7 @@ const Inspector: FC<{ path?: InspectorTabPath }> = ({ path }) => {
         {path?.tab === "obs" && <Inspector_OBS key="obs" />}
         {path?.tab === Services.vrc && <Inspector_VRC key="vrc" />}
         {path?.tab === Services.twitch && <Inspector_Twitch key="twitch" />}
+        {path?.tab === Services.bilibili && <Inspector_Bilibili key="bilibili" />}
         {path?.tab === Services.discord && <Inspector_Discord key="discord" />}
         {path?.tab === "settings" && <Inspector_Settings key="settings" />}
         {path?.tab === "scenes" && <Inspector_Scenes key="scenes" />}

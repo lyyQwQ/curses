@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Bilibili Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@latest/build/qrcode.min.js"></script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f4f5f7;
+    }
+    .container {
+      text-align: center;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .qrcode {
+      width: 200px;
+      height: 200px;
+      margin: 20px 0;
+      border: 2px solid #00a1d6;
+      border-radius: 4px;
+    }
+    .status {
+      color: #666;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    .refresh-btn {
+      display: none;
+      padding: 8px 16px;
+      background: #00a1d6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .refresh-btn:hover {
+      background: #0091c2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>扫码登录</h3>
+    <div id="qrcode-container">
+      <img id="qrcode" class="qrcode" src="">
+    </div>
+    <p class="status" id="status">请使用哔哩哔哩手机客户端扫描二维码</p>
+    <button id="refresh" class="refresh-btn">刷新二维码</button>
+  </div>
+
+  <script>
+    const qrcodeImg = document.getElementById('qrcode');
+    const statusText = document.getElementById('status');
+    const refreshBtn = document.getElementById('refresh');
+
+    // 生成二维码
+    async function generateQRCode(url) {
+      try {
+        const qrcodeDataUrl = await QRCode.toDataURL(url, {
+          width: 200,
+          margin: 1,
+          color: {
+            dark: '#00a1d6',
+            light: '#ffffff'
+          }
+        });
+        qrcodeImg.src = qrcodeDataUrl;
+        statusText.textContent = '生成二维码成功，请使用哔哩哔哩手机客户端扫描二维码';
+      } catch (error) {
+        console.error('生成二维码失败:', error);
+        statusText.textContent = `生成二维码失败，请刷新重试, error: ${error}`;
+      }
+    }
+
+    // 接收来自主窗口的消息
+    window.addEventListener('message', async (event) => {
+      const data = event.data;
+      if (data.type === 'qrcode') {
+        await generateQRCode(data.url);
+      } else if (data.type === 'status') {
+        switch(data.code) {
+          case 86090:
+            statusText.textContent = '已扫码，请在手机上确认';
+            break;
+          case 86038:
+            statusText.textContent = '二维码已过期';
+            refreshBtn.style.display = 'inline-block';
+            break;
+          case 0:
+            try {
+              statusText.textContent = `登录成功, ${JSON.stringify(data)}`;
+            } catch (error) {
+              statusText.textContent = `登录失败, ${error}`;
+            }
+            // 发送登录成功消息
+            window.opener?.postMessage({
+              type: 'bilibili_login_success',
+              url: data.loginInfo
+            }, '*');
+            // 延迟关闭窗口
+            setTimeout(() => window.close(), 10000);
+            break;
+        }
+      }
+    });
+
+    // 刷新按钮点击事件
+    refreshBtn.addEventListener('click', () => {
+      window.opener?.postMessage({
+        type: 'bilibili_refresh_qrcode'
+      }, '*');
+      refreshBtn.style.display = 'none';
+      statusText.textContent = '请使用哔哩哔哩手机客户端扫描二维码';
+    });
+  </script>
+</body>
+</html> 

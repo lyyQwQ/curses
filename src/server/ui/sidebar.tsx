@@ -12,7 +12,7 @@ import Dropdown from "./dropdown/Dropdown";
 import Tooltip from "./dropdown/Tooltip";
 import Inspector from "./inspector";
 import { MdExtension } from "react-icons/md";
-import { SiDiscord, SiObsstudio, SiTwitch } from "react-icons/si";
+import { SiBilibili, SiDiscord, SiObsstudio, SiTwitch } from "react-icons/si";
 import { useTranslation } from "react-i18next";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -140,6 +140,7 @@ const Sidebar: FC = memo(() => {
         <div className={classNames("flex flex-col transition-spacing space-y-1", expand ? "pl-2" : "pl-0")}>
           <SideBarButton tab={{ tab: "obs" }} tooltip={t("obs.title")}><SiObsstudio /></SideBarButton>
           <SideBarButton tab={{ tab: Services.twitch }} tooltip={t("twitch.title")}><SiTwitch /></SideBarButton>
+          <SideBarButton tab={{ tab: Services.bilibili }} tooltip={t("bilibili.title")}><SiBilibili /></SideBarButton>
           <SideBarButton tab={{ tab: Services.discord }} tooltip={t("discord.title")}><SiDiscord /></SideBarButton>
           <SideBarButton tab={{ tab: Services.vrc }} tooltip={t("vrc.title")}><RiMessage2Fill /></SideBarButton>
         </div>

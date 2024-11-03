@@ -7,6 +7,7 @@ export enum STT_Backends {
   azure = "azure",
   deepgram = "deepgram",
   speechly = "speechly",
+  openai = "openai",
 }
 
 export const zodSTT_Backends = z.nativeEnum(STT_Backends);
@@ -48,6 +49,14 @@ export const Service_STT_Schema = z.object({
     key: zSafe(z.coerce.string(), ""),
     punctuate: zSafe(z.coerce.boolean(), true),
     profanity: zSafe(z.coerce.boolean(), true),
+    interim: zSafe(z.coerce.boolean(), true),
+  }).default({}),
+  openai: z.object({
+    device: zSafe(z.coerce.string(), "default"),
+    apiKey: zSafe(z.coerce.string(), ""),
+    baseUrl: zSafe(z.coerce.string(), "https://api.openai.com/v1"),
+    model: zSafe(z.coerce.string(), "whisper-1"),
+    silenceTimeout: zSafe(zStringNumber(), "20"),
     interim: zSafe(z.coerce.boolean(), true),
   }).default({})
 }).default({});

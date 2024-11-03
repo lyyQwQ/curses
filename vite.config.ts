@@ -10,7 +10,7 @@ export default defineConfig({
     //   filename: 'stats/rollup-stats.html',
     // }),
     react({
-      // jsxImportSource: '@welldone-software/why-did-you-render'
+      refresh: true,
     }),
     VitePWA({
       workbox: {

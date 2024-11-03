@@ -22,6 +22,7 @@
     "field_file": "文件",
     "field_connection_status": "连接状态",
     "field_connection_port": "端口",
+    "field_send_delay": "发送延迟",
     "btn_edit_replacements": "编辑替换词",
     "btn_add": "添加",
     "btn_connect": "连接",
@@ -32,6 +33,8 @@
     "btn_start": "开始",
     "btn_stop": "停止",
     "btn_copy": "复制",
+    "btn_login": "登录",
+    "btn_logout": "注销",
     "status_connected": "连接",
     "status_disconnected": "断开连接",
     "status_connecting": "正在连接...",
@@ -91,7 +94,14 @@
     "azure_profanity_masked": "隐藏",
     "azure_profanity_removed": "移除",
     "azure_profanity_raw": "不处理",
-    "azure_silence_timeout": "静音超时"
+    "azure_silence_timeout": "静音超时",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_model": "模型",
+    "openai_silence_timeout": "静音超时",
+    "openai_interim": "临时结果"
   },
   "tts": {
     "title": "文本转语音",
@@ -131,7 +141,14 @@
     "azure_profanity": "脏话",
     "azure_profanity_masked": "隐藏",
     "azure_profanity_removed": "移除",
-    "azure_profanity_raw": "不处理"
+    "azure_profanity_raw": "不处理",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_model": "模型",
+    "openai_language": "语言",
+    "openai_system_prompt": "系统提示"
   },
 
   "settings": {
@@ -198,6 +215,26 @@
     "title": "重新映射表情",
     "label_dictionary_key": "词语",
     "label_dictionary_value": "表情"
+  },
+  "bilibili": {
+    "title": "哔哩哔哩",
+    "desc": "B站直播弹幕互动",
+    "login_title": "B站登录",
+    "login_scan_tip": "请使用B站APP扫描二维码登录",
+    "login_scan_desc": "扫码后请在手机上确认登录",
+    "btn_login_error": "登录失败 - 重试",
+    "section_room": "直播间设置",
+    "section_chat": "聊天设置",
+    "section_gpt": "GPT设置",
+    "section_auto_reply": "自动回复设置",
+    "field_room_id": "房间ID",
+    "field_room_title": "房间标题", 
+    "field_gpt_token": "GPT Token",
+    "field_gpt_auto_reply": "自动GPT回复",
+    "field_enable_chat": "启用聊天",
+    "field_post_only_when_streaming": "仅在直播时发送",
+    "auto_reply_trigger": "触发词",
+    "auto_reply_response": "回复内容"
   },
   "discord": {
     "title": "Discord",

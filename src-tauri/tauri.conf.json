@@ -30,6 +30,11 @@
       "fs":{
         "all": true,
         "scope": ["$APPDATA/**"]
+      },
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": ["https://*.bilibili.com/*", "https://api.bilibili.com/*"]
       }
     },
     "bundle": {

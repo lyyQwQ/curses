@@ -91,7 +91,12 @@
     "azure_profanity_masked": "隱藏",
     "azure_profanity_removed": "移除",
     "azure_profanity_raw": "不處理",
-    "azure_silence_timeout": "靜音超時"
+    "azure_silence_timeout": "靜音超時",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_model": "模型"
   },
   "tts": {
     "title": "文本轉語音",
@@ -131,7 +136,14 @@
     "azure_profanity": "臟話",
     "azure_profanity_masked": "隱藏",
     "azure_profanity_removed": "移除",
-    "azure_profanity_raw": "不處理"
+    "azure_profanity_raw": "不處理",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_model": "模型",
+    "openai_language": "語言",
+    "openai_system_prompt": "系統提示"
   },
 
   "settings": {

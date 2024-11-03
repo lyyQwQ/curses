@@ -44,6 +44,20 @@ const Azure: FC = memo(() => {
   </>
 })
 
+const OpenAI: FC = memo(() => {
+  const {t} = useTranslation();
+  const pr = useSnapshot(window.ApiServer.state.services.translation.data.openai);
+  const up = <K extends keyof Translation_State["openai"]>(key: K, v: Translation_State["openai"][K]) => window.ApiServer.state.services.translation.data.openai[key] = v;
+  return <>
+    <InputText label="transl.openai_api_key" type="password" value={pr.apiKey} onChange={e => up("apiKey", e.target.value)} />
+    <InputText label="transl.openai_base_url" value={pr.baseUrl} onChange={e => up("baseUrl", e.target.value)} />
+    <InputText label="transl.openai_model" value={pr.model} onChange={e => up("model", e.target.value)} />
+    <InputText label="transl.openai_language" value={pr.language} onChange={e => up("language", e.target.value)} />
+    <InputText label="transl.openai_system_prompt" value={pr.systemPrompt} onChange={e => up("systemPrompt", e.target.value)} />
+    <InputCheckbox label="common.field_interim_results" onChange={e => up("interim", e)} value={pr.interim} />
+  </>
+})
+
 const Inspector_Translation: FC = () => {
   const {t} = useTranslation();
   const data = useSnapshot(window.ApiServer.state.services.translation);
@@ -60,9 +74,11 @@ const Inspector_Translation: FC = () => {
       <Inspector.Deactivatable active={state.status === ServiceNetworkState.disconnected}>
         <InputSelect options={[
           { label: "Azure", value: Translation_Backends.azure },
+          { label: "OpenAI", value: Translation_Backends.openai },
         ]} label="common.field_service" value={data.data.backend} onValueChange={e => up("backend", e as Translation_Backends)} />
 
         {data.data.backend === Translation_Backends.azure && <Azure />}
+        {data.data.backend === Translation_Backends.openai && <OpenAI />}
       </Inspector.Deactivatable>
 
       <ServiceButton status={state.status} onStart={() => window.ApiServer.translation.start()} onStop={() => window.ApiServer.translation.stop()} />

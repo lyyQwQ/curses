@@ -10,6 +10,7 @@ import Service_STT from "./services/stt";
 import Service_Translation from "./services/translation";
 import Service_TTS from "./services/tts";
 import Service_Twitch from "./services/twitch";
+import Service_Bilibili from "./services/bilibili";
 import Service_VRC from "./services/vrc";
 import { changeLanguage, initI18n } from '@/i18n';
 
@@ -20,6 +21,7 @@ export enum Services {
   translation = "translation",
   twitch = "twitch",
   discord = "discord",
+  bilibili = "bilibili",
 }
 
 class ApiServer {
@@ -35,7 +37,7 @@ class ApiServer {
   public readonly obs = new Service_OBS();
   public readonly keyboard = new Service_Keyboard();
   public readonly sound = new Service_Sound();
-
+  public readonly bilibili = new Service_Bilibili();
   get state() {
     return this._state.state;
   }
@@ -97,6 +99,7 @@ class ApiServer {
     await this._state.init();
     await window.ApiShared.peer.startServer();
     await this.twitch.init();
+    await this.bilibili.init();
     await this.discord.init();
     await this.stt.init();
     await this.tts.init();

@@ -172,6 +172,29 @@ const Speechly: FC = () => {
   </>
 }
 
+const OpenAI: FC = () => {
+  const {t} = useTranslation();
+  const pr = useSnapshot(window.ApiServer.state.services.stt.data.openai);
+  const up = <K extends keyof STT_State["openai"]>(key: K, v: STT_State["openai"][K]) => window.ApiServer.state.services.stt.data.openai[key] = v;
+
+  return <>
+    <Inspector.SubHeader>{t('stt.openai_title')}</Inspector.SubHeader>
+    <InputText label="stt.openai_api_key" type="password" value={pr.apiKey} onChange={e => up("apiKey", e.target.value)} />
+    <InputText label="stt.openai_base_url" value={pr.baseUrl} onChange={e => up("baseUrl", e.target.value)} />
+    <InputSelect 
+      label="stt.openai_model"
+      options={[
+        { label: "Whisper-1", value: "whisper-1" },
+      ]}
+      value={pr.model}
+      onValueChange={e => up("model", e)}
+    />
+    <InputWebAudioInput value={pr.device} onChange={e => up("device", e)} label="common.field_input_device"/>
+    <InputText type="number" step="1" label="stt.openai_silence_timeout" value={pr.silenceTimeout} onChange={e => up("silenceTimeout", e.target.value)} />
+    <InputCheckbox label="stt.field_enable_interim_results" onChange={e => up("interim", e)} value={pr.interim} />
+  </>
+}
+
 const WordsReplacementModal: FC = () => {
   const {t} = useTranslation();
   const data = useSnapshot(window.ApiServer.state.services.stt);
@@ -219,7 +242,8 @@ const Inspector_STT: FC = () => {
           { label: "Browser", value: STT_Backends.browser },
           { label: "Azure", value: STT_Backends.azure },
           { label: "Deepgram", value: STT_Backends.deepgram },
-          { label: "Speechly", value: STT_Backends.speechly }
+          { label: "Speechly", value: STT_Backends.speechly },
+          { label: "OpenAI", value: STT_Backends.openai },
         ]} label="common.field_service" value={data.data.backend} onValueChange={e => up("backend", e as STT_Backends)} />
 
         {data.data.backend === STT_Backends.browser && <Browser />}
@@ -227,6 +251,7 @@ const Inspector_STT: FC = () => {
         {data.data.backend === STT_Backends.deepgram && <Deepgram />}
         {data.data.backend === STT_Backends.speechly && <Speechly />}
         {data.data.backend === STT_Backends.native && <Native />}
+        {data.data.backend === STT_Backends.openai && <OpenAI />}
       </Inspector.Deactivatable>
 
       {data.data.backend !== STT_Backends.browser && <ServiceButton status={state.status} onStart={() => window.ApiServer.stt.start()} onStop={() => window.ApiServer.stt.stop()} />}
@@ -237,5 +262,9 @@ const Inspector_STT: FC = () => {
     </Inspector.Content>
   </Inspector.Body>
 }
+
+
+
+
 
 export default Inspector_STT;

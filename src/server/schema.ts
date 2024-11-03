@@ -9,6 +9,7 @@ import { Service_VRC_Schema } from "./services/vrc/schema";
 
 import { zSafe, zStringNumber } from "@/utils";
 import { z } from "zod";
+import { Service_Bilibili_Schema } from "./services/bilibili/schema";
 
 const zodServiceSchemaFactory = <Data extends z.ZodDefault<z.AnyZodObject>>(schema: Data) => {
   return z.object({
@@ -42,6 +43,7 @@ export const BackendSchema = z.object({
     twitch: zodServiceSchemaFactory(Service_Twitch_Schema).default({}),
     discord: zodServiceSchemaFactory(Service_Discord_Schema).default({}),
     obs: zodServiceSchemaFactory(Service_OBS_Schema).default({}),
+    bilibili: zodServiceSchemaFactory(Service_Bilibili_Schema).default({}),
   }).default({})
 }).default({});
 export type BackendState = z.infer<typeof BackendSchema>;

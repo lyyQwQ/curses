@@ -94,7 +94,12 @@
     "azure_profanity_raw": "Raw",
     "azure_secondary_language": "Secondary language",
     "azure_use_secondary_language": "Enable secondary language",
-    "azure_silence_timeout": "Silence timeout"
+    "azure_silence_timeout": "Silence timeout",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_model": "Model"
   },
   "tts": {
     "title": "Text to speech",
@@ -135,7 +140,14 @@
     "azure_profanity": "Profanity",
     "azure_profanity_masked": "Masked",
     "azure_profanity_removed": "Removed",
-    "azure_profanity_raw": "Raw"
+    "azure_profanity_raw": "Raw",
+
+    "openai_title": "OpenAI",
+    "openai_api_key": "Api key",
+    "openai_base_url": "Base URL",
+    "openai_language": "Target language",
+    "openai_model": "Model",
+    "openai_system_prompt": "System prompt"
   },
 
   "settings": {
