@@ -7,8 +7,9 @@ import {
 
 export class STT_NativeService implements ISTTService {
   constructor(private bindings: ISTTReceiver) {}
-  
+
   #instance?: SpeechRecognition;
+  #stream?: MediaStream;
   
   dispose(): void {}
   
@@ -30,26 +31,35 @@ export class STT_NativeService implements ISTTService {
     if (Object.values(state.native).some(isEmptyValue))
       return this.bindings.onStop("Options missing");
 
-    const sp = window.webkitSpeechRecognition || window.SpeechRecognition;
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: { deviceId: state.native.device ? { exact: state.native.device } : undefined }
+      })
+      .then(stream => {
+        this.#stream = stream;
 
-    this.#instance = new sp();
-    this.#instance.lang = state.native.language;
-    this.#instance.continuous = true;
-    this.#instance.interimResults = true;
+        const sp = window.webkitSpeechRecognition || window.SpeechRecognition;
 
-    this.#instance.onstart = () => this.bindings.onStart();
-    this.#instance.onresult = (event: any) => this.#processResults(event);
-    
-    this.#instance.addEventListener("error", (error) => {
-      // listener for active connection
-      if (error.error === "no-speech")
-        return;
-      this.stop(error.error);
-    });
-    this.#instance.onend = (e: any) => this.#instance?.start(); // keep alive
-    this.#instance.start();
+        this.#instance = new sp();
+        this.#instance.lang = state.native.language;
+        this.#instance.continuous = true;
+        this.#instance.interimResults = true;
 
-    window.onbeforeunload = () => this.#instance?.stop();
+        this.#instance.onstart = () => this.bindings.onStart();
+        this.#instance.onresult = (event: any) => this.#processResults(event);
+
+        this.#instance.addEventListener("error", (error) => {
+          // listener for active connection
+          if (error.error === "no-speech")
+            return;
+          this.stop(error.error);
+        });
+        this.#instance.onend = () => this.#instance?.start(); // keep alive
+        this.#instance.start();
+
+        window.onbeforeunload = () => this.#instance?.stop();
+      })
+      .catch(() => this.bindings.onStop("Error initializing mic"));
   }
 
   stop(error?: string): void {
@@ -57,6 +67,10 @@ export class STT_NativeService implements ISTTService {
       return;
     this.#instance.onend = null;
     this.#instance.stop();
+    if (this.#stream) {
+      this.#stream.getTracks().forEach(t => t.stop());
+      this.#stream = undefined;
+    }
     this.bindings.onStop(error);
   }
 }

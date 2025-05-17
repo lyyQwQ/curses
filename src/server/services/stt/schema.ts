@@ -21,6 +21,7 @@ export const Service_STT_Schema = z.object({
   replaceWordsIgnoreCase: zSafe(z.coerce.boolean(), false),
   replaceWordsPreserveCase: zSafe(z.coerce.boolean(), false),
   native: z.object({
+    device: zSafe(z.coerce.string(), "default"),
     language_group: zSafe(z.coerce.string(), ""),
     language: zSafe(z.coerce.string(), ""),
   }).default({}),
