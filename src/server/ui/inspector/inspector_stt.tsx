@@ -12,6 +12,7 @@ import { InputCheckbox, InputMapObject, InputMappedGroupSelect, InputSelect, Inp
 import NiceModal from "@ebay/nice-modal-react";
 import Modal from "../Modal";
 import { useTranslation } from 'react-i18next';
+import { VolumeIndicator } from './components/VolumeIndicator';
 
 const Native: FC = () => {
   const {t} = useTranslation();
@@ -88,6 +89,13 @@ const Azure: FC = () => {
     <InputText label="stt.azure_location" value={pr.location} onChange={e => up("location", e.target.value)} />
 
     <InputWebAudioInput value={pr.device} onChange={e => up("device", e)} label="common.field_input_device"/>
+    
+    <div className="mt-2">
+      <label className="label">
+        <span className="label-text">{t('common.field_input_volume')}</span>
+      </label>
+      <VolumeIndicator deviceId={pr.device} />
+    </div>
 
     <div className=" divider"></div>
     <InputMappedGroupSelect

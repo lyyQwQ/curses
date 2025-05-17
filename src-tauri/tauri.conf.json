@@ -22,7 +22,13 @@
         "all": true
       },
       "window": {
-        "all": true
+        "all": true,
+        "create": true,
+        "setPosition": true
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
       },
       "globalShortcut": {
         "all": true
@@ -54,7 +60,9 @@
       ],
       "identifier": "com.cursescaptions.app",
       "longDescription": "",
-      "resources": [],
+      "resources": [
+        "../public/oauth_bilibili.html"
+      ],
       "shortDescription": "",
       "targets": "all",
       "windows": {
@@ -64,7 +72,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' data: asset: https://asset.localhost; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://*.bilibili.com https://api.bilibili.com; style-src 'self' 'unsafe-inline'"
     },
     "updater": {
       "active": false
@@ -72,11 +80,11 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 900,
         "resizable": true,
         "decorations": false,
         "title": "Curses",
-        "width": 800
+        "width": 1600
       }
     ]
   }

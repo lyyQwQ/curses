@@ -22,7 +22,8 @@ const saveLoginInfo = (info: {[K in keyof typeof LOGIN_INFO]?: string}) => {
   const state = window.ApiServer.state.services.bilibili.data as any;
   Object.entries(info).forEach(([key, value]) => {
     if(value) state[key as keyof typeof LOGIN_INFO] = value;
-    toast.info(`保存登录信息, ${key}:${value}`);
+    // toast.info(`保存登录信息, ${key}:${value}`);
+    toast.info(`保存登录信息`);
   });
 }
 

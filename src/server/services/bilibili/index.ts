@@ -8,8 +8,9 @@ import { sendMessageApi } from "./api/live";
 import NiceModal from "@ebay/nice-modal-react";
 import { toast } from "react-toastify";
 import { invoke } from "@tauri-apps/api";
-import { listen } from "@tauri-apps/api/event";
+import { listen, Event as TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { LOGIN_INFO } from "./schema";
+import { WebviewWindow } from '@tauri-apps/api/window';
 
 export class Service_Bilibili implements IServiceInterface {
   constructor() {}
@@ -29,44 +30,58 @@ export class Service_Bilibili implements IServiceInterface {
   });
 
   qrcodeTimer?: NodeJS.Timeout;
+  private unlistenChildEvents?: UnlistenFn | null;
 
   get #state() {
     return window.ApiServer.state.services.bilibili;
   }
 
+  private loginWindow?: WebviewWindow | null;
+
+  private async cleanupLoginWindowResources() {
+    console.log("cleanupLoginWindowResources called.");
+    if (this.unlistenChildEvents) {
+      console.log("Cleaning up bilibili_child_event listener.");
+      this.unlistenChildEvents();
+      this.unlistenChildEvents = null;
+    }
+    this.stopQrcodeCheck();
+    if (this.loginWindow) {
+        console.log("Setting loginWindow to null in cleanupLoginWindowResources.");
+        this.loginWindow = null; 
+    }
+  }
+
   async init() {
     try {
       console.info("Bilibili service init");
-      // 检查登录状态
       if(await isLogin()) {
         await this.connect();
       }
 
-      // 订阅状态变化
-      subscribeKey(this.#state.data, "chatEnable", (value) => {
+      subscribeKey(this.#state.data, "chatEnable" as any, (value) => {
         if (value) {
           if(this.state.userInfo) this.connect();
         } else this.disconnect();
       });
 
-      // 订阅消息源
-      serviceSubscibeToSource(this.#state.data, "chatPostSource", (data) => {
+      serviceSubscibeToSource(this.#state.data as any, "chatPostSource", (data) => {
         if (
           this.#state.data.chatPostLive &&
           this.state.status !== ServiceNetworkState.connected
         )
           return;
-        this.#state.data.chatPostEnable &&
+        if(this.#state.data.chatPostEnable &&
         this.#state.data.chatEnable &&
         this.#state.data.roomId &&
         !this.#state.data.chatPostLive &&
           data?.value &&
-          data?.type === TextEventType.final &&
-          this.sendMessage(data.value);
+          data?.type === TextEventType.final) {
+            this.sendMessage(data.value);
+          }
       });
 
-      // 订阅输入
-      serviceSubscibeToInput(this.#state.data, "chatPostInput", (data) => {
+      serviceSubscibeToInput(this.#state.data as any, "chatPostInput", (data) => {
         if (
           this.#state.data.chatPostLive &&
           this.state.status !== ServiceNetworkState.connected
@@ -79,11 +94,12 @@ export class Service_Bilibili implements IServiceInterface {
         if (data?.type !== TextEventType.final) {
           return;
         }
-        this.#state.data.chatPostEnable &&
+        if (this.#state.data.chatPostEnable &&
         !this.#state.data.chatPostLive &&
         this.#state.data.chatEnable &&
-        this.#state.data.roomId &&
+        this.#state.data.roomId){
           this.sendMessage(data.value);
+        }
       });
 
     } catch (error) {
@@ -91,79 +107,179 @@ export class Service_Bilibili implements IServiceInterface {
       this.state.status = ServiceNetworkState.disconnected;
     }
   }
-  private loginWindow?: Window | null;
 
   async login() {
     try {
       console.info('Bilibili login started');
       toast.info('开始登录B站');
+
+      if (this.unlistenChildEvents) {
+        console.log("login(): Found existing unlistenChildEvents, cleaning up before new login attempt.");
+        this.unlistenChildEvents();
+        this.unlistenChildEvents = null;
+      }
             
-      // 如果已经有登录窗口，先关闭
-      if(this.loginWindow) {
-        this.loginWindow.close();
+      if (this.loginWindow) {
+        try {
+          console.info('Bilibili login window may be open, attempting to set focus.');
+          await this.loginWindow.setFocus();
+          console.info('Bilibili login window already open, focused.');
+          return; 
+        } catch (e) {
+          console.warn('Failed to focus existing login window, will try to close and reopen.', e);
+          try { 
+            await this.loginWindow.close(); 
+            console.log("Existing login window closed successfully before reopening.");
+          } catch (closeError) { 
+            console.warn('Error closing previous window instance before reopening', closeError); 
+          }
+          await this.cleanupLoginWindowResources();
+          this.loginWindow = null;
+        }
       }
 
-      // 获取二维码
       const resp = await getLoginUrlApi();
-      console.info('Login URL response:', resp);
+      console.info('Login URL response:', JSON.stringify(resp));
       
-      if(!resp?.url) {
-        console.error('Failed to get login URL');
-        toast.error(`获取登录URL失败, ${JSON.stringify(resp)}`);
+      if(!resp?.url || !resp?.qrcode_key) {
+        console.error('Failed to get login URL or qrcode_key');
+        toast.error(`获取登录URL或凭证失败, ${JSON.stringify(resp)}`);
         return;
       }
       
       this.state.qrcodeKey = resp.qrcode_key;
       this.state.qrcodeUrl = resp.url;
 
-      // 打开登录窗口
-      this.loginWindow = window.open(
-        `${window.location.origin}/oauth_bilibili.html`,
-        'bilibili_login',
-        'width=400,height=500,menubar=no,location=no,resizable=no,scrollbars=no,status=no'
-      );
-
-      if(!this.loginWindow) {
-        console.error('Failed to open login window');
-        return;
-      }
-
-      // 等待窗口加载完成后发送二维码URL
-      this.loginWindow.onload = () => {
-        toast.info(`二维码已发送, url:${this.state.qrcodeUrl}`);
-        this.loginWindow?.postMessage({
-          type: 'qrcode',
-          url: this.state.qrcodeUrl
-        }, '*');
-      }
+      const isDev = import.meta.env.DEV;
+      const pageUrl = isDev 
+        ? new URL('/oauth_bilibili.html', window.location.origin).toString()
+        : 'oauth_bilibili.html';
       
-      // 开始轮询
+      console.info(`Attempting to open Bilibili login window with URL: ${pageUrl}`);
+
+      this.loginWindow = new WebviewWindow('bilibili_login_auth_window', {
+        url: pageUrl,
+        title: 'Bilibili 扫码登录',
+        width: 400,
+        height: 550,
+        resizable: false,
+        minimizable: true,
+        maximizable: false,
+        decorations: true,
+        center: true,
+        alwaysOnTop: false,
+      });
+
+      this.unlistenChildEvents = await listen('bilibili_child_event', (event: TauriEvent<any>) => {
+        console.log(`Received 'bilibili_child_event'. Window Label: ${event.windowLabel}, Event: ${JSON.stringify(event.payload)}`);
+
+        if (!this.loginWindow || event.windowLabel !== this.loginWindow.label) {
+          console.warn(`'bilibili_child_event' ignored: window label mismatch or loginWindow is null. Received: ${event.windowLabel}, Expected: ${this.loginWindow?.label}`);
+          return;
+        }
+
+        const childEventPayload = event.payload as { type: string, payload?: any };
+        console.log(`Processing 'bilibili_child_event' type: ${childEventPayload.type}`);
+
+        switch (childEventPayload.type) {
+          case 'ready':
+            console.log("'bilibili_child_event:ready' received from login window.");
+            if (this.loginWindow && this.state.qrcodeUrl) {
+              console.log('Login window is ready, emitting bilibili-init-qrcode with URL:', this.state.qrcodeUrl);
+              this.loginWindow.emit('bilibili-init-qrcode', {
+                type: 'qrcode',
+                url: this.state.qrcodeUrl
+              }).then(() => {
+                console.info(`QR code emitted to login window after ready signal: ${this.state.qrcodeUrl}`);
+                toast.info(`二维码已发送至登录窗口`);
+              }).catch(err => {
+                console.error('Failed to emit bilibili-init-qrcode after ready signal:', err);
+                toast.error('无法发送二维码至已就绪的登录窗口');
+              });
+            } else {
+              let errorMsg = "'bilibili_child_event:ready' received, but cannot send QR code: ";
+              if (!this.state.qrcodeUrl) errorMsg += "qrcodeUrl is missing. ";
+              if (!this.loginWindow) errorMsg += "loginWindow is missing.";
+              console.warn(errorMsg);
+              toast.error(errorMsg);
+            }
+            break;
+          case 'refresh_qrcode':
+            console.log("'bilibili_child_event:refresh_qrcode' received. Re-initiating login.");
+            toast.info('收到刷新二维码请求，正在重新获取...');
+            this.login();
+            break;
+          case 'login_success':
+            console.log("'bilibili_child_event:login_success' received with payload:", JSON.stringify(childEventPayload.payload));
+            toast.success('登录成功 (来自登录窗口事件)');
+            const loginUrl = childEventPayload.payload?.url;
+            if (typeof loginUrl !== 'string') {
+                console.error('Login success event did not contain a valid URL string in payload.url', childEventPayload.payload);
+                toast.error('登录成功，但未能获取到有效的登录信息URL');
+                return;
+            }
+            const params = new URLSearchParams(loginUrl.split('?')[1]);
+            const uid = params.get('DedeUserID');
+            const csrf = params.get('bili_jct');
+            const sessdata = params.get('SESSDATA');
+
+            if (uid && csrf && sessdata) {
+              toast.info(`登录信息提取成功，保存中... UID: ${uid}`);
+              console.log(`Saving login info: UID=${uid}, CSRF present, SESSDATA present`);
+              saveLoginInfo({
+                uid: uid,
+                csrf: csrf,
+                cookie: `SESSDATA=${sessdata}`,
+              });
+              this.connect();
+              if (this.loginWindow) {
+                console.log("Closing login window after successful login and connection attempt.");
+                this.loginWindow.close().catch(closeErr => console.warn("Error closing login window post-success:", closeErr));
+              }
+            } else {
+              toast.error('登录信息不完整，请重试');
+              console.error('Incomplete login info received from login_success event:', loginUrl);
+            }
+            break;
+          default:
+            console.warn(`Received unknown 'bilibili_child_event' type: ${childEventPayload.type}`, JSON.stringify(childEventPayload));
+        }
+      });
+      console.log("'bilibili_child_event' listener setup complete.");
+
+      this.loginWindow.once('tauri://created', async () => {
+        console.log('Bilibili login window (tauri://created) successful.');
+        toast.info('登录窗口已创建');
+      });
+
+      this.loginWindow.once('tauri://error', async (e) => {
+        console.error('Failed to create Bilibili login window (tauri://error):', e);
+        toast.error(`无法打开B站登录窗口: ${e?.payload || JSON.stringify(e)}`);
+        await this.cleanupLoginWindowResources();
+        this.loginWindow = null;
+      });
+      
+      this.loginWindow.onCloseRequested(async (event) => {
+          console.log('Bilibili login window close requested by user or system. Cleaning up resources.');
+          await this.cleanupLoginWindowResources();
+          console.log('Login window close requested handler finished.');
+      });
+      
       this.startQrcodeCheck();
 
-      // 监听消息
-      const handleMessage = (event: MessageEvent) => {
-        if(event.data.type === 'bilibili_refresh_qrcode') {
-          this.login();
-        } else if(event.data.type === 'bilibili_login_success') {
-          toast.success('登录成功');
-          const params = new URLSearchParams(event.data.url.split('?')[1]);
-          toast.info(`登录成功，保存, uid:${params.get('DedeUserID')}`);
-          saveLoginInfo({
-            uid: params.get('DedeUserID') || '',
-            csrf: params.get('bili_jct') || '',
-            cookie: `SESSDATA=${params.get('SESSDATA')}`,
-          });
-          toast.info('连接B站服务');
-          this.connect();
-          window.removeEventListener('message', handleMessage);
-        }
-      };
-
-      window.addEventListener('message', handleMessage);
-      
     } catch (error) {
-      console.error("获取B站登录二维码失败:", error);
-      toast.error(`获取B站登录二维码失败, ${error}`);
+      console.error("获取B站登录二维码或打开窗口失败:", error);
+      toast.error(`处理B站登录失败: ${String(error)}`);
+      if (this.loginWindow) {
+        console.warn("Error in login function, attempting to close login window if it exists.");
+        try { 
+            await this.loginWindow.close(); 
+        } catch (e) {
+            console.warn("Error closing login window during error handling in login():", e);
+        }
+      }
+      await this.cleanupLoginWindowResources();
+      this.loginWindow = null;
     }
   }
 
@@ -182,12 +298,11 @@ export class Service_Bilibili implements IServiceInterface {
         const resp = await verifyQrCodeApi(this.state.qrcodeKey);
         this.state.qrcodeStatus = resp.code;
 
-        // 发送状态到登录窗口
-        this.loginWindow.postMessage({
+        this.loginWindow?.emit('bilibili-status-update', {
           type: 'status',
           code: resp.code,
           loginInfo: resp.url
-        }, '*');
+        });
 
         if(resp.code === 0) {
           clearInterval(this.qrcodeTimer);
@@ -200,11 +315,10 @@ export class Service_Bilibili implements IServiceInterface {
   }
 
   private messageQueue: string[] = [];
-  private isProcessing = false;  // 是否正在处理消息
-  private shouldProcess = false; // 是否应该继续处理
-  private isAddingMessage = false; // 消息添加锁
+  private isProcessing = false;
+  private shouldProcess = false;
+  private isAddingMessage = false;
 
-  // 启动消息处理
   private startMessageProcessing() {
     if (this.isProcessing) return;
     
@@ -212,12 +326,10 @@ export class Service_Bilibili implements IServiceInterface {
     this.processMessages();
   }
 
-  // 停止消息处理
   private stopMessageProcessing() {
     this.shouldProcess = false;
   }
 
-  // 处理消息队列
   private async processMessages() {
     if (this.isProcessing) return;
     
@@ -225,40 +337,33 @@ export class Service_Bilibili implements IServiceInterface {
     console.info('Message processing started');
 
     while (this.shouldProcess) {
-      // 如果队列为空，等待一秒后继续检查
       if (this.messageQueue.length === 0) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
 
-      // 获取消息
       const message = this.messageQueue[0];
       const delay = parseInt(this.#state.data.chatSendDelay) || 5;
 
       try {
         console.info(`Sending message: ${message}, delay: ${delay}s`);
         
-        // 发送消息
         await sendMessageApi({
           roomid: this.#state.data.roomId,
           msg: message
         });
 
-        // 发送成功，移除消息
         this.messageQueue.shift();
         toast.success('发送B站弹幕成功');
 
-        // 等待指定延迟
         await new Promise(resolve => setTimeout(resolve, delay * 1000));
       } catch (error) {
         console.error('Failed to send message:', error);
         toast.error('发送B站弹幕失败');
         
-        // 发送失败，移到队列末尾重试
         this.messageQueue.shift();
         this.messageQueue.push(message);
         
-        // 等待一段时间后重试
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
@@ -267,17 +372,14 @@ export class Service_Bilibili implements IServiceInterface {
     console.info('Message processing stopped');
   }
 
-  // 添加消息到队列
   private async addToMessageQueue(message: string) {
-    // 如果正在添加消息，等待
     while(this.isAddingMessage) {
       await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     try {
-      this.isAddingMessage = true; // 获取锁
+      this.isAddingMessage = true;
 
-      // 截断消息(中英文混合长度计算)
       const getMessageLength = (str: string) => {
         let length = 0;
         for(let i = 0; i < str.length; i++) {
@@ -304,13 +406,13 @@ export class Service_Bilibili implements IServiceInterface {
       }
 
     } finally {
-      this.isAddingMessage = false; // 释放锁
+      this.isAddingMessage = false;
     }
   }
 
-  // 修改connect方法
   async connect() {
     try {
+      console.log("Bilibili service: connect() called.");
       this.state.status = ServiceNetworkState.connecting;
       
       const valid = await validateLoginInfoApi();
@@ -328,7 +430,6 @@ export class Service_Bilibili implements IServiceInterface {
       this.state.userInfo = userInfo;
       this.state.status = ServiceNetworkState.connected;
 
-      // 启动消息处理
       this.startMessageProcessing();
     } catch (error) {
       console.error("连接B站服务失败:", error);
@@ -337,30 +438,41 @@ export class Service_Bilibili implements IServiceInterface {
     }
   }
 
-  // 修改disconnect方法
   disconnect() {
+    console.log("Bilibili service: disconnect() called.");
     this.stopMessageProcessing();
     this.state.status = ServiceNetworkState.disconnected;
     if(this.qrcodeTimer) {
-      clearInterval(this.qrcodeTimer);
+        console.log("disconnect(): Clearing qrcodeTimer.");
+        clearInterval(this.qrcodeTimer);
+        this.qrcodeTimer = undefined;
     }
   }
 
-  // 修改logout方法
   logout() {
+    console.log("Bilibili service: logout() called.");
     this.stopMessageProcessing();
     clearInfo();
     this.state.userInfo = null;
     this.state.status = ServiceNetworkState.disconnected;
     if(this.qrcodeTimer) {
-      clearInterval(this.qrcodeTimer);
+        console.log("logout(): Clearing qrcodeTimer.");
+        clearInterval(this.qrcodeTimer);
+        this.qrcodeTimer = undefined;
     }
   }
 
-  // sendMessage方法保持不变
   async sendMessage(message: string) {
     if(!this.#state.data.roomId || !message) return;
     await this.addToMessageQueue(message);
+  }
+
+  private stopQrcodeCheck() {
+    if (this.qrcodeTimer) {
+      clearInterval(this.qrcodeTimer);
+      this.qrcodeTimer = undefined;
+      console.log('QR code polling stopped via stopQrcodeCheck().');
+    }
   }
 }
 

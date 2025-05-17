@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Bilibili Login</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@latest/build/qrcode.min.js"></script>
+  <script src="./qrcode.min.js"></script>
   <style>
     body {
       display: flex;
@@ -59,12 +59,38 @@
   </div>
 
   <script>
+    console.log('Script execution started for oauth_bilibili.html');
+
+    // Check for QRCode library immediately after its expected load point (assuming qrcode.min.js is sourced above this script block or earlier)
+    // Note: If qrcode.min.js is sourced *after* this inline script, this check needs to be moved or deferred.
+    if (typeof QRCode === 'undefined') {
+      console.error('QRCode library is UNDEFINED immediately after main script block start. Ensure qrcode.min.js is loaded BEFORE this script.');
+    } else {
+      console.log('QRCode library IS DEFINED immediately after main script block start.');
+    }
+
     const qrcodeImg = document.getElementById('qrcode');
     const statusText = document.getElementById('status');
     const refreshBtn = document.getElementById('refresh');
 
+    // Access Tauri event API (if available)
+    const tauriEvent = window.__TAURI__?.event;
+    if (tauriEvent) {
+      console.log('Tauri event API (window.__TAURI__.event) is available.');
+    } else {
+      console.warn('Tauri event API (window.__TAURI__.event) is NOT available. Falling back to postMessage for QR/status if applicable.');
+      // If Tauri is not available, this window cannot effectively communicate back to the main app
+      // in a structured way for 'ready' or 'refresh' signals using the new event-based system.
+    }
+
     // 生成二维码
     async function generateQRCode(url) {
+      console.log(`generateQRCode function called with URL: ${url}`);
+      if (typeof QRCode === 'undefined') {
+        console.error('QRCode library is UNDEFINED at the time of generateQRCode call!');
+        statusText.textContent = 'QRCode库加载失败，无法生成二维码。';
+        return; // Prevent further execution if QRCode is not available
+      }
       try {
         const qrcodeDataUrl = await QRCode.toDataURL(url, {
           width: 200,
@@ -75,53 +101,105 @@
           }
         });
         qrcodeImg.src = qrcodeDataUrl;
+        console.log('QR code generated and img src set.');
         statusText.textContent = '生成二维码成功，请使用哔哩哔哩手机客户端扫描二维码';
       } catch (error) {
-        console.error('生成二维码失败:', error);
-        statusText.textContent = `生成二维码失败，请刷新重试, error: ${error}`;
+        console.error('生成二维码失败 (Error caught in generateQRCode):', error);
+        statusText.textContent = `生成二维码失败，请刷新重试, error: ${error.message || JSON.stringify(error)}`;
       }
     }
 
-    // 接收来自主窗口的消息
+    // 接收来自主窗口的 postMessage (用于刷新和登录成功)
     window.addEventListener('message', async (event) => {
       const data = event.data;
-      if (data.type === 'qrcode') {
-        await generateQRCode(data.url);
-      } else if (data.type === 'status') {
-        switch(data.code) {
-          case 86090:
-            statusText.textContent = '已扫码，请在手机上确认';
-            break;
-          case 86038:
-            statusText.textContent = '二维码已过期';
-            refreshBtn.style.display = 'inline-block';
-            break;
-          case 0:
-            try {
-              statusText.textContent = `登录成功, ${JSON.stringify(data)}`;
-            } catch (error) {
-              statusText.textContent = `登录失败, ${error}`;
-            }
-            // 发送登录成功消息
-            window.opener?.postMessage({
-              type: 'bilibili_login_success',
-              url: data.loginInfo
-            }, '*');
-            // 延迟关闭窗口
-            setTimeout(() => window.close(), 10000);
-            break;
-        }
-      }
+      // This listener now ONLY handles messages FROM this window TO the opener (main app)
+      // or specific browser postMessages if any.
+      // It should NOT handle QR code data or status updates from the main app anymore.
+      // Those will be handled by Tauri event listeners if tauriEvent is available.
+      
+      // Example: if you had other postMessage types from main app, they would need to be
+      // converted to tauri events if they were for initializing this window.
+      // For now, we assume 'message' event is primarily for this window posting back to opener.
     });
+
+    // Listen for QR code data from Tauri main process (replaces postMessage for QR init)
+    if (tauriEvent) {
+      console.log('Setting up Tauri event listener for bilibili-init-qrcode...');
+      tauriEvent.listen('bilibili-init-qrcode', async (event) => {
+        console.log('Received bilibili-init-qrcode event via Tauri:', JSON.stringify(event));
+        const data = event.payload;
+        if (data && data.type === 'qrcode') {
+          console.log('Processing bilibili-init-qrcode payload:', JSON.stringify(data));
+          await generateQRCode(data.url);
+        } else {
+          console.warn('Received bilibili-init-qrcode event, but payload type is not qrcode or data is missing:', data);
+        }
+      });
+
+      console.log('Setting up Tauri event listener for bilibili-status-update...');
+      // Listen for status updates from Tauri main process (replaces postMessage for status)
+      tauriEvent.listen('bilibili-status-update', (event) => {
+        console.log('Received bilibili-status-update event via Tauri:', JSON.stringify(event));
+        const data = event.payload;
+        if (data && data.type === 'status') {
+          console.log('Processing bilibili-status-update payload:', JSON.stringify(data));
+          switch(data.code) {
+            case 86090:
+              statusText.textContent = '已扫码，请在手机上确认';
+              break;
+            case 86038:
+              statusText.textContent = '二维码已过期';
+              refreshBtn.style.display = 'inline-block';
+              break;
+            case 0:
+              try {
+                statusText.textContent = `登录成功, ${typeof data.loginInfo === 'string' ? data.loginInfo : JSON.stringify(data.loginInfo)}`;
+              }
+              catch (error) {
+                statusText.textContent = `登录数据处理失败, ${error}`;
+              }
+              // 发送登录成功消息
+              if (tauriEvent) {
+                console.log('Login success. Emitting bilibili_child_event { type: "login_success", payload: { url: data.loginInfo } } via Tauri event.');
+                tauriEvent.emit('bilibili_child_event', { type: 'login_success', payload: { url: data.loginInfo } });
+              } else {
+                console.warn('Tauri event API not available, cannot emit login_success signal to main process.');
+              }
+              // 延迟关闭窗口
+              setTimeout(() => window.close(), 3000); // Reduced delay slightly
+              break;
+            default: // Handle other/unknown status codes if necessary
+              statusText.textContent = `收到状态: ${data.code}`;
+              break;
+          }
+        }
+      });
+    } else {
+      console.warn('Tauri event API (window.__TAURI__.event) not available. QR code/status updates from main app will not be received via Tauri events, and child-to-parent communication will fail.');
+      statusText.textContent = '错误: Tauri接口不可用,无法与主程序通信。';
+    }
 
     // 刷新按钮点击事件
     refreshBtn.addEventListener('click', () => {
-      window.opener?.postMessage({
-        type: 'bilibili_refresh_qrcode'
-      }, '*');
+      if (tauriEvent) {
+        console.log('Refresh button clicked. Emitting bilibili_child_event { type: "refresh_qrcode" } via Tauri event.');
+        tauriEvent.emit('bilibili_child_event', { type: 'refresh_qrcode' });
+      } else {
+        console.warn('Tauri event API not available, cannot emit refresh_qrcode signal to main process.');
+      }
       refreshBtn.style.display = 'none';
       statusText.textContent = '请使用哔哩哔哩手机客户端扫描二维码';
     });
+
+    // Notify opener that the window is ready
+    if (tauriEvent) {
+      console.log('oauth_bilibili.html script fully parsed. Emitting bilibili_child_event { type: "ready" } via Tauri event.');
+      tauriEvent.emit('bilibili_child_event', { type: 'ready' });
+    } else {
+      console.warn('Tauri event API not available, cannot emit ready signal to main process.');
+    }
+    console.log('Attempted to emit ready signal (if tauriEvent was available).');
+
   </script>
 </body>
 </html> 
