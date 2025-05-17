@@ -273,6 +273,20 @@
       gap: 1rem;
     }
 
+    .volume {
+      width: 10rem;
+      height: 0.8rem;
+      background-color: rgb(28, 28, 30);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .volume > div {
+      height: 100%;
+      background-color: seagreen;
+      width: 0%;
+    }
+
     .logo {
       font-weight: 700;
       font-size: 1.4rem;
@@ -361,14 +375,19 @@
     <div class="actions">
       <select value="English" id="select-lang"></select>
       <select id="select-dial"></select>
+      <select id="select-device"></select>
+      <div class="volume"><div id="volume-bar"></div></div>
       <button id="button-start" @click="pog()">Start</button>
     </div>
   </div>
   <script>
     (async () => {
       let selectedDial = 'en-Us';
+      let selectedDevice = '';
       const selectLang = document.getElementById("select-lang");
       const selectDial = document.getElementById("select-dial");
+      const selectDevice = document.getElementById("select-device");
+      const volumeBar = document.getElementById("volume-bar");
       const buttonStart = document.getElementById("button-start");
       const listElement = document.getElementById("list");
 
@@ -430,6 +449,50 @@
       }
       langs.forEach(lang => addOption(lang[0], lang[0], selectLang));
 
+      async function initDevices() {
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const inputs = devices.filter(d => d.kind === 'audioinput');
+          inputs.forEach(d => addOption(d.label || d.deviceId, d.deviceId, selectDevice));
+          if (inputs[0]) {
+            selectedDevice = inputs[0].deviceId;
+            selectDevice.value = selectedDevice;
+            initVolume(selectedDevice);
+          }
+        } catch(e) {}
+      }
+
+      selectDevice.oninput = e => {
+        selectedDevice = e.target.value;
+        initVolume(selectedDevice);
+      };
+
+      async function initVolume(deviceId) {
+        if (!deviceId) return;
+        if (window._volStream) {
+          window._volStream.getTracks().forEach(t => t.stop());
+          window._volCtx.close();
+          cancelAnimationFrame(window._volRaf);
+        }
+        window._volCtx = new AudioContext();
+        window._volStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
+        const analyser = window._volCtx.createAnalyser();
+        analyser.fftSize = 256;
+        const src = window._volCtx.createMediaStreamSource(window._volStream);
+        src.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const update = () => {
+          analyser.getByteFrequencyData(data);
+          const avg = data.reduce((a,b)=>a+b)/data.length;
+          volumeBar.style.width = Math.min(100, avg/255*100) + '%';
+          window._volRaf = requestAnimationFrame(update);
+        };
+        update();
+      }
+
+      initDevices();
+
       function handleSelectLang(langGroup) {
         const dialects = getDialectList(langs, langGroup);
         while (selectDial.firstChild)
@@ -459,7 +522,7 @@
     
 
       async function spawnInstance() {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        await navigator.mediaDevices.getUserMedia({ audio: { deviceId: selectedDevice ? { exact: selectedDevice } : undefined } });
         let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
         sttInstance = new SpeechRecognition();
         sttInstance.continuous = true;
