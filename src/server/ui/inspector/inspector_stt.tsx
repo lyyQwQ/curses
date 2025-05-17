@@ -23,6 +23,13 @@ const Native: FC = () => {
   };
   return <>
     <Inspector.SubHeader>{t('stt.native_title')}</Inspector.SubHeader>
+    <InputWebAudioInput value={pr.device} onChange={e => (window.ApiServer.state.services.stt.data.native.device = e)} label="common.field_input_device" />
+    <div className="mt-2">
+      <label className="label">
+        <span className="label-text">{t('common.field_input_volume')}</span>
+      </label>
+      <VolumeIndicator deviceId={pr.device} />
+    </div>
     <InputMappedGroupSelect
       labelGroup="common.field_language"
       labelOption="common.field_dialect"

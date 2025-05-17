@@ -7,6 +7,7 @@
     "field_dialect": "方言",
     "field_output_device": "输出设备",
     "field_input_device": "输入设备",
+    "field_input_volume": "输入音量",
     "field_dictionary": "字典",
     "field_css": "CSS",
     "field_interim_results": "临时结果",
