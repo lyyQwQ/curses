@@ -7,8 +7,9 @@ import {
 
 export class STT_NativeService implements ISTTService {
   constructor(private bindings: ISTTReceiver) {}
-  
+
   #instance?: SpeechRecognition;
+  #stream?: MediaStream;
   
   dispose(): void {}
   
@@ -29,6 +30,12 @@ export class STT_NativeService implements ISTTService {
   start(state: STT_State): void {
     if (Object.values(state.native).some(isEmptyValue))
       return this.bindings.onStop("Options missing");
+
+    navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: state.native.device ? { exact: state.native.device } : undefined }
+    }).then(stream => {
+      this.#stream = stream;
+    }).catch(() => {});
 
     const sp = window.webkitSpeechRecognition || window.SpeechRecognition;
 
@@ -57,6 +64,10 @@ export class STT_NativeService implements ISTTService {
       return;
     this.#instance.onend = null;
     this.#instance.stop();
+    if (this.#stream) {
+      this.#stream.getTracks().forEach(t => t.stop());
+      this.#stream = undefined;
+    }
     this.bindings.onStop(error);
   }
 }
