@@ -101,6 +101,7 @@
   "tts": {
     "title": "文本轉語音",
     "field_voice": "音色",
+    "field_stop_with_stream": "隨 Twitch 串流停止",
 
     "uberduck_title": "Uberduck",
     "uberduck_api_key": "Api key",
@@ -124,6 +125,7 @@
     "native_title": "本地",
 
     "tiktok_title": "抖音",
+    "edge_title": "Edge",
     "windows_title": "Windows"
   },
   "transl": {
@@ -243,7 +245,7 @@
     "section_canvas": "畫布",
     "section_scenes": "場景",
     "field_canvas_size": "畫布大小",
-    "scene_menu_title": "場景", 
+    "scene_menu_title": "場景",
     "btn_add_scene": "添加場景",
     "btn_duplicate_scene": "復製場景",
     "btn_remove_scene": "刪除場景"
@@ -253,7 +255,7 @@
     "section_text_source": "文本源",
     "section_text_source_desc": "從哪裏獲取文本",
     "field_text_profanity_mask": "臟話屏蔽",
-    
+
     "section_font": "字體",
     "section_font_desc": "顏色, 大小, 陰影, 輪廓",
     "font_color": "顏色",
