@@ -129,7 +129,8 @@
     "native_title": "本地",
 
     "tiktok_title": "抖音",
-    "windows_title": "Windows"
+    "windows_title": "Windows",
+    "edge_title": "Edge"
   },
   "transl": {
     "title": "翻译",
@@ -228,7 +229,7 @@
     "section_gpt": "GPT设置",
     "section_auto_reply": "自动回复设置",
     "field_room_id": "房间ID",
-    "field_room_title": "房间标题", 
+    "field_room_title": "房间标题",
     "field_gpt_token": "GPT Token",
     "field_gpt_auto_reply": "自动GPT回复",
     "field_enable_chat": "启用聊天",
@@ -268,7 +269,7 @@
     "section_canvas": "画布",
     "section_scenes": "场景",
     "field_canvas_size": "画布大小",
-    "scene_menu_title": "场景", 
+    "scene_menu_title": "场景",
     "btn_add_scene": "添加场景",
     "btn_duplicate_scene": "复制场景",
     "btn_remove_scene": "删除场景"
@@ -278,7 +279,7 @@
     "section_text_source": "文本源",
     "section_text_source_desc": "从哪里获取文本",
     "field_text_profanity_mask": "脏话屏蔽",
-    
+
     "section_font": "字体",
     "section_font_desc": "颜色, 大小, 阴影, 轮廓",
     "font_color": "颜色",

@@ -128,7 +128,8 @@
     "native_title": "Native",
 
     "tiktok_title": "TikTok",
-    "windows_title": "Windows"
+    "windows_title": "Windows",
+    "edge_title": "Edge"
   },
   "transl": {
     "title": "Translation",
@@ -248,7 +249,7 @@
     "section_canvas": "Canvas",
     "section_scenes": "Scenes",
     "field_canvas_size": "Canvas size",
-    "scene_menu_title": "Scene", 
+    "scene_menu_title": "Scene",
     "btn_add_scene": "Add scene",
     "btn_duplicate_scene": "Duplicate scene",
     "btn_remove_scene": "Remove scene"
@@ -258,7 +259,7 @@
     "section_text_source": "Text source",
     "section_text_source_desc": "Where should we get the text from",
     "field_text_profanity_mask": "Profanity mask",
-    
+
     "section_font": "Font",
     "section_font_desc": "Colors, size, shadow, outline",
     "font_color": "Color",
