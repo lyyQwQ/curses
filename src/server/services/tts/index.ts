@@ -1,5 +1,10 @@
 import { IServiceInterface, ServiceNetworkState, TextEventType } from "@/types";
-import { WordReplacementsCache, buildWordReplacementsCache, serviceSubscibeToInput, serviceSubscibeToSource } from "@/utils";
+import {
+  WordReplacementsCache,
+  buildWordReplacementsCache,
+  serviceSubscibeToInput,
+  serviceSubscibeToSource,
+} from "@/utils";
 import { toast } from "react-toastify";
 import { proxy } from "valtio";
 import { subscribeKey } from "valtio/utils";
@@ -9,11 +14,8 @@ import { TTS_NativeService } from "./services/native";
 import { TTS_TikTokService } from "./services/tiktok";
 import { TTS_WindowsService } from "./services/windows";
 import { TTS_UberduckService } from "./services/uberduck";
-import {
-  ITTSReceiver,
-  ITTSService,
-  ITTSServiceConstructor
-} from "./types";
+import { TTS_EdgeService } from "./services/edge";
+import { ITTSReceiver, ITTSService, ITTSServiceConstructor } from "./types";
 
 const backends: {
   [k in TTS_Backends]: ITTSServiceConstructor;
@@ -23,6 +25,7 @@ const backends: {
   [TTS_Backends.azure]: TTS_AzureService,
   [TTS_Backends.tiktok]: TTS_TikTokService,
   [TTS_Backends.uberduck]: TTS_UberduckService,
+  [TTS_Backends.edge]: TTS_EdgeService,
 };
 
 class Service_TTS implements IServiceInterface, ITTSReceiver {
@@ -30,7 +33,7 @@ class Service_TTS implements IServiceInterface, ITTSReceiver {
 
   serviceState = proxy({
     status: ServiceNetworkState.disconnected,
-    error: ""
+    error: "",
   });
 
   #_wordReplacementsCache!: WordReplacementsCache;
@@ -40,40 +43,48 @@ class Service_TTS implements IServiceInterface, ITTSReceiver {
   }
 
   updateReplacementsCache() {
-    this.#_wordReplacementsCache = buildWordReplacementsCache(this.data.replaceWords, this.data.replaceWordsIgnoreCase);
+    this.#_wordReplacementsCache = buildWordReplacementsCache(
+      this.data.replaceWords,
+      this.data.replaceWordsIgnoreCase
+    );
   }
 
   runReplacements(value: string) {
-    if (this.#_wordReplacementsCache.isEmpty)
-      return value;
-    return value.replace(this.#_wordReplacementsCache.regexp, v => {
-      const _v = this.data.replaceWordsIgnoreCase ? v.toLowerCase() : v;
-      return this.#_wordReplacementsCache.map[_v];
-    }).replace(/[<>]/gi, ""); // clear ssml tags
+    if (this.#_wordReplacementsCache.isEmpty) return value;
+    return value
+      .replace(this.#_wordReplacementsCache.regexp, (v) => {
+        const _v = this.data.replaceWordsIgnoreCase ? v.toLowerCase() : v;
+        return this.#_wordReplacementsCache.map[_v];
+      })
+      .replace(/[<>]/gi, ""); // clear ssml tags
   }
 
   async init() {
     this.updateReplacementsCache();
-    subscribeKey(this.data, "replaceWords", () => this.updateReplacementsCache());
-    subscribeKey(this.data, "replaceWordsIgnoreCase", () => this.updateReplacementsCache());
-    serviceSubscibeToSource(this.data, "source", data => {
-      if (data?.type === TextEventType.final)
-        this.play(data.value);
+    subscribeKey(this.data, "replaceWords", () =>
+      this.updateReplacementsCache()
+    );
+    subscribeKey(this.data, "replaceWordsIgnoreCase", () =>
+      this.updateReplacementsCache()
+    );
+    serviceSubscibeToSource(this.data, "source", (data) => {
+      if (data?.type === TextEventType.final) this.play(data.value);
     });
 
-    serviceSubscibeToInput(this.data, "inputField", data => {
-      if (data?.type === TextEventType.final)
-        this.play(data.value);
+    serviceSubscibeToInput(this.data, "inputField", (data) => {
+      if (data?.type === TextEventType.final) this.play(data.value);
     });
 
-    if (this.data.autoStart)
-      this.start();
+    if (this.data.autoStart) this.start();
     window.ApiShared.pubsub.subscribe("stream.on_ended", () => {
-      if (this.data.stopWithStream && this.serviceState.status === ServiceNetworkState.connected) {
+      if (
+        this.data.stopWithStream &&
+        this.serviceState.status === ServiceNetworkState.connected
+      ) {
         this.stop();
       }
     });
-  }  
+  }
 
   stop(): void {
     this.#serviceInstance?.stop();
@@ -95,13 +106,14 @@ class Service_TTS implements IServiceInterface, ITTSReceiver {
     this.#serviceInstance = undefined;
     this.#setStatus(ServiceNetworkState.disconnected);
   }
-  onFilePlayRequest(data: ArrayBuffer, options?: Record<string, any> | undefined): void {
-  }
+  onFilePlayRequest(
+    data: ArrayBuffer,
+    options?: Record<string, any> | undefined
+  ): void {}
 
   play(value: string) {
     const patchedValue = this.runReplacements(value);
-    if (!patchedValue)
-      return;
+    if (!patchedValue) return;
     this.#serviceInstance?.play(patchedValue);
   }
 
